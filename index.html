@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+  <style>
+    :root {
+      --green:       #1D9E75;
+      --green-light: #E1F5EE;
+      --green-dark:  #0F6E56;
+      --red:         #D85A30;
+      --red-light:   #FAECE7;
+      --red-dark:    #993C1D;
+      --amber:       #EF9F27;
+      --amber-light: #FAEEDA;
+      --amber-dark:  #854F0B;
+      --blue:        #378ADD;
+      --blue-light:  #E6F1FB;
+      --blue-dark:   #185FA5;
+      --bg:          #F6F5F2;
+      --surface:     #FFFFFF;
+      --surface2:    #F0EEE9;
+      --border:      rgba(0,0,0,0.08);
+      --border2:     rgba(0,0,0,0.14);
+      --text:        #1A1A18;
+      --text2:       #5A5A56;
+      --text3:       #9A9A94;
+      --radius:      12px;
+      --radius-sm:   8px;
+      --shadow:      0 2px 12px rgba(0,0,0,0.07);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+    }
+
+    /* ── TOP NAV ── */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      height: 60px;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .logo {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo i { color: var(--green); font-size: 22px; }
+    .nav-tabs {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+    .nav-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      border: none;
+      background: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text2);
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-tab:hover { background: var(--surface2); color: var(--text); }
+    .nav-tab.active { background: var(--text); color: #fff; }
+    .nav-tab i { font-size: 16px; }
+
+    /* ── LAYOUT ── */
+    .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* ── SUMMARY CARDS ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 2rem;
+    }
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      box-shadow: var(--shadow);
+    }
+    .summary-card .label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .summary-card .label i { font-size: 15px; }
+    .summary-card .value {
+      font-size: 26px;
+      font-weight: 600;
+      font-family: 'DM Mono', monospace;
+      line-height: 1.1;
+    }
+    .summary-card .sub {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 6px;
+    }
+    .c-income .label { color: var(--green-dark); }
+    .c-income .value { color: var(--green-dark); }
+    .c-income { border-left: 4px solid var(--green); }
+    .c-expense .label { color: var(--red-dark); }
+    .c-expense .value { color: var(--red-dark); }
+    .c-expense { border-left: 4px solid var(--red); }
+    .c-balance { border-left: 4px solid var(--blue); }
+    .c-balance .label { color: var(--blue-dark); }
+    .c-balance .value { color: var(--blue-dark); }
+    .c-balance.neg { border-left-color: var(--red); }
+    .c-balance.neg .label { color: var(--red-dark); }
+    .c-balance.neg .value { color: var(--red-dark); }
+
+    /* ── ALERTS ── */
+    .alert-area { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 8px; }
+    .alert {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .alert-warn { background: var(--amber-light); color: var(--amber-dark); }
+    .alert-danger { background: var(--red-light); color: var(--red-dark); }
+    .alert i { font-size: 16px; flex-shrink: 0; }
+
+    /* ── PANELS ── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title i { color: var(--text2); font-size: 18px; }
+
+    /* ── FORM ── */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label { font-size: 12px; font-weight: 500; color: var(--text2); }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      font-family: inherit;
+      font-size: 14px;
+      padding: 9px 12px;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(29,158,117,0.15);
+    }
+    .type-toggle {
+      display: flex;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .type-btn {
+      flex: 1;
+      padding: 9px;
+      border: none;
+      background: var(--bg);
+      color: var(--text2);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .type-btn.active-income { background: var(--green-light); color: var(--green-dark); }
+    .type-btn.active-expense { background: var(--red-light); color: var(--red-dark); }
+    .btn-row { grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-top: 4px; }
+    .btn-primary {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 22px;
+      background: var(--text);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:active { transform: scale(0.97); }
+
+    /* ── TRANSACTION LIST ── */
+    .tx-list { display: flex; flex-direction: column; gap: 8px; }
+    .tx-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      transition: border-color 0.15s;
+    }
+    .tx-item:hover { border-color: var(--border2); }
+    .tx-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+    .tx-icon.income { background: var(--green-light); color: var(--green-dark); }
+    .tx-icon.expense { background: var(--red-light); color: var(--red-dark); }
+    .tx-info { flex: 1; min-width: 0; }
+    .tx-desc { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tx-meta { font-size: 11px; color: var(--text3); margin-top: 3px; }
+    .tx-cat-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: var(--surface2);
+      color: var(--text2);
+      margin-left: 6px;
+    }
+    .tx-amount {
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'DM Mono', monospace;
+      flex-shrink: 0;
+    }
+    .tx-amount.income { color: var(--green-dark); }
+    .tx-amount.expense { color: var(--red-dark); }
+    .tx-del {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text3);
+      font-size: 17px;
+      padding: 4px;
+      line-height: 1;
+      border-radius: 6px;
+      transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+    .tx-del:hover { background: var(--red-light); color: var(--red-dark); }
+    .empty {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text3);
+      font-size: 13px;
+    }
+    .empty i { font-size: 40px; display: block; margin-bottom: 10px; opacity: 0.4; }
+
+    /* ── FILTER BAR ── */
+    .filter-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .filter-bar select,
+    .filter-bar input {
+      font-family: inherit;
+      font-size: 13px;
+      padding: 7px 10px;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    /* ── BUDGET ── */
+    .budget-limit-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .budget-limit-row:last-of-type { border-bottom: none; }
+    .budget-limit-row label {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .budget-limit-row label i { font-size: 16px; color: var(--text2); }
+    .budget-limit-row input {
+      width: 140px;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      padding: 7px 10px;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+    }
+    .budget-limit-row input:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(29,158,117,0.15);
+    }
+    .usage-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .usage-row:last-child { border-bottom: none; }
+    .usage-cat { font-size: 13px; font-weight: 500; width: 100px; flex-shrink: 0; }
+    .usage-bar-wrap {
+      flex: 1;
+      background: var(--surface2);
+      border-radius: 20px;
+      height: 8px;
+      overflow: hidden;
+    }
+    .usage-bar { height: 100%; border-radius: 20px; transition: width 0.5s ease; }
+    .usage-pct { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--text2); width: 36px; text-align: right; flex-shrink: 0; }
+    .usage-amounts { font-size: 11px; color: var(--text3); width: 190px; text-align: right; flex-shrink: 0; }
+
+    /* ── CHARTS ── */
+    .chart-wrap { position: relative; width: 100%; height: 280px; }
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: var(--text2);
+    }
+    .chart-legend span { display: flex; align-items: center; gap: 5px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      .summary-grid { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.full { grid-column: 1; }
+      .btn-row { grid-column: 1; }
+      .nav-tab span { display: none; }
+      .topbar { padding: 0 1rem; }
+      .container { padding: 1rem; }
+      .usage-amounts { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topbar">
+  <div class="logo">
+    <i class="ti ti-wallet"></i>
+    Budget Manager
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('transaksi')">
+      <i class="ti ti-list"></i><span>Transaksi</span>
+    </button>
+    <button class="nav-tab" onclick="switchTab('tambah')">
+      <i class="ti ti-plus"></i><span>Tambah</span>
+    </button>
+    <button class="nav-tab" onclick="switchTab('budget')">
+      <i class="ti ti-adjustments-horizontal"></i><span>Budget</span>
+    </button>
+    <button class="nav-tab" onclick="switchTab('grafik')">
+      <i class="ti ti-chart-bar"></i><span>Grafik</span>
+    </button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- SUMMARY -->
+  <div class="summary-grid">
+    <div class="summary-card c-income">
+      <div class="label"><i class="ti ti-trending-up"></i> Total Pemasukan</div>
+      <div class="value" id="total-income">Rp 0</div>
+      <div class="sub" id="count-income">0 transaksi</div>
+    </div>
+    <div class="summary-card c-expense">
+      <div class="label"><i class="ti ti-trending-down"></i> Total Pengeluaran</div>
+      <div class="value" id="total-expense">Rp 0</div>
+      <div class="sub" id="count-expense">0 transaksi</div>
+    </div>
+    <div class="summary-card c-balance" id="balance-card">
+      <div class="label"><i class="ti ti-scale"></i> Saldo / Sisa</div>
+      <div class="value" id="total-balance">Rp 0</div>
+      <div class="sub" id="balance-pct">0% tersimpan</div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: TRANSAKSI ── -->
+  <div id="panel-transaksi" class="panel active">
+    <div class="alert-area" id="alert-area"></div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-list-details"></i> Riwayat Transaksi</div>
+      <div class="filter-bar">
+        <select id="filter-type" onchange="renderTransactions()">
+          <option value="all">Semua Jenis</option>
+          <option value="income">Pemasukan</option>
+          <option value="expense">Pengeluaran</option>
+        </select>
+        <select id="filter-cat" onchange="renderTransactions()">
+          <option value="all">Semua Kategori</option>
+        </select>
+        <input type="month" id="filter-month" onchange="renderTransactions()" />
+      </div>
+      <div class="tx-list" id="tx-list">
+        <div class="empty"><i class="ti ti-inbox"></i>Belum ada transaksi.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: TAMBAH ── -->
+  <div id="panel-tambah" class="panel">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-plus-circle"></i> Tambah Transaksi Baru</div>
+      <div class="form-grid">
+
+        <div class="form-group full">
+          <label>Jenis Transaksi</label>
+          <div class="type-toggle">
+            <button class="type-btn active-income" id="btn-income" onclick="setType('income')">
+              <i class="ti ti-arrow-down-circle"></i> Pemasukan
+            </button>
+            <button class="type-btn" id="btn-expense" onclick="setType('expense')">
+              <i class="ti ti-arrow-up-circle"></i> Pengeluaran
+            </button>
+          </div>
+          <input type="hidden" id="tx-type" value="income" />
+        </div>
+
+        <div class="form-group full">
+          <label>Deskripsi</label>
+          <input type="text" id="tx-desc" placeholder="Contoh: Gaji bulanan, Makan siang…" />
+        </div>
+
+        <div class="form-group">
+          <label>Jumlah (Rp)</label>
+          <input type="number" id="tx-amount" placeholder="0" min="0" step="1000" />
+        </div>
+
+        <div class="form-group">
+          <label>Kategori</label>
+          <select id="tx-cat">
+            <optgroup label="Pemasukan">
+              <option value="Gaji">Gaji</option>
+              <option value="Bisnis">Bisnis</option>
+              <option value="Investasi">Investasi</option>
+              <option value="Bonus">Bonus</option>
+            </optgroup>
+            <optgroup label="Pengeluaran">
+              <option value="Makanan">Makanan</option>
+              <option value="Transport">Transport</option>
+              <option value="Hiburan">Hiburan</option>
+              <option value="Kesehatan">Kesehatan</option>
+              <option value="Tagihan">Tagihan</option>
+              <option value="Belanja">Belanja</option>
+              <option value="Pendidikan">Pendidikan</option>
+              <option value="Lainnya">Lainnya</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Tanggal</label>
+          <input type="date" id="tx-date" />
+        </div>
+
+        <div class="form-group">
+          <label>Catatan (opsional)</label>
+          <input type="text" id="tx-note" placeholder="Catatan tambahan…" />
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-primary" onclick="addTransaction()">
+            <i class="ti ti-device-floppy"></i> Simpan Transaksi
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: BUDGET ── -->
+  <div id="panel-budget" class="panel">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-adjustments"></i> Atur Batas Budget Bulanan</div>
+      <div id="budget-form"></div>
+      <div style="margin-top:1rem;display:flex;justify-content:flex-end;">
+        <button class="btn-primary" onclick="saveBudgetLimits()">
+          <i class="ti ti-device-floppy"></i> Simpan Batas
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-chart-bar"></i> Penggunaan Budget</div>
+      <div id="budget-usage"></div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: GRAFIK ── -->
+  <div id="panel-grafik" class="panel">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-chart-bar"></i> Pemasukan vs Pengeluaran (per Kategori)</div>
+      <div class="chart-legend">
+        <span><span class="legend-dot" style="background:#1D9E75"></span>Pemasukan</span>
+        <span><span class="legend-dot" style="background:#D85A30"></span>Pengeluaran</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart-bar" role="img" aria-label="Grafik pemasukan dan pengeluaran per kategori"></canvas>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+      <div class="card">
+        <div class="card-title"><i class="ti ti-chart-donut"></i> Distribusi Pengeluaran</div>
+        <div class="chart-legend" id="donut-legend"></div>
+        <div class="chart-wrap" style="height:220px;">
+          <canvas id="chart-donut" role="img" aria-label="Distribusi pengeluaran per kategori"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-chart-line"></i> Tren Bulanan</div>
+        <div class="chart-legend">
+          <span><span class="legend-dot" style="background:#1D9E75"></span>Masuk</span>
+          <span><span class="legend-dot" style="background:#D85A30"></span>Keluar</span>
+        </div>
+        <div class="chart-wrap" style="height:220px;">
+          <canvas id="chart-line" role="img" aria-label="Tren pemasukan dan pengeluaran per bulan"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+/* ════════════════════════════════
+   STATE
+════════════════════════════════ */
+let transactions  = JSON.parse(localStorage.getItem('bm_tx')     || '[]');
+let budgetLimits  = JSON.parse(localStorage.getItem('bm_limits') || '{}');
+let currentType   = 'income';
+let barChart, donutChart, lineChart;
+
+const EXPENSE_CATS = ['Makanan','Transport','Hiburan','Kesehatan','Tagihan','Belanja','Pendidikan','Lainnya'];
+const CAT_ICONS = {
+  Gaji:'ti-briefcase', Bisnis:'ti-building-store', Investasi:'ti-trending-up-2', Bonus:'ti-gift',
+  Makanan:'ti-bowl', Transport:'ti-car', Hiburan:'ti-device-tv', Kesehatan:'ti-heart-rate-monitor',
+  Tagihan:'ti-file-invoice', Belanja:'ti-shopping-bag', Pendidikan:'ti-school', Lainnya:'ti-dots-circle'
+};
+const PALETTE = ['#1D9E75','#378ADD','#D85A30','#D4537E','#7F77DD','#EF9F27','#639922','#885780','#3C3489','#888780'];
+
+/* ════════════════════════════════
+   UTILITIES
+════════════════════════════════ */
+function fmt(n) {
+  return 'Rp\u00A0' + Math.round(n).toLocaleString('id-ID');
+}
+function fmtShort(n) {
+  if(n >= 1e9) return 'Rp ' + (n/1e9).toFixed(1) + 'M';
+  if(n >= 1e6) return 'Rp ' + (n/1e6).toFixed(1) + 'jt';
+  return 'Rp ' + Math.round(n/1e3) + 'rb';
+}
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+function monthLabel(ym) {
+  const [y,m] = ym.split('-');
+  const names = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  return names[parseInt(m)-1] + ' ' + y;
+}
+
+/* ════════════════════════════════
+   TAB SWITCHING
+════════════════════════════════ */
+function switchTab(name) {
+  document.querySelectorAll('.nav-tab').forEach((t, i) => {
+    const tabs = ['transaksi','tambah','budget','grafik'];
+    t.classList.toggle('active', tabs[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'grafik')  renderCharts();
+  if (name === 'budget')  renderBudgetPanel();
+  if (name === 'transaksi') renderAll();
+}
+
+/* ════════════════════════════════
+   TYPE TOGGLE
+════════════════════════════════ */
+function setType(type) {
+  currentType = type;
+  document.getElementById('tx-type').value = type;
+  document.getElementById('btn-income').className  = 'type-btn' + (type==='income'  ? ' active-income'  : '');
+  document.getElementById('btn-expense').className = 'type-btn' + (type==='expense' ? ' active-expense' : '');
+}
+
+/* ════════════════════════════════
+   ADD TRANSACTION
+════════════════════════════════ */
+function addTransaction() {
+  const desc   = document.getElementById('tx-desc').value.trim();
+  const amount = parseFloat(document.getElementById('tx-amount').value);
+  const cat    = document.getElementById('tx-cat').value;
+  const date   = document.getElementById('tx-date').value;
+  const note   = document.getElementById('tx-note').value.trim();
+
+  if (!desc)           { alert('Mohon isi deskripsi transaksi.'); return; }
+  if (!amount || amount <= 0) { alert('Mohon isi jumlah yang valid (> 0).'); return; }
+  if (!date)           { alert('Mohon pilih tanggal.'); return; }
+
+  const tx = { id: Date.now(), type: currentType, desc, amount, cat, date, note };
+  transactions.unshift(tx);
+  save();
+
+  // Reset form
+  document.getElementById('tx-desc').value   = '';
+  document.getElementById('tx-amount').value = '';
+  document.getElementById('tx-note').value   = '';
+
+  renderAll();
+  switchTab('transaksi');
+}
+
+/* ════════════════════════════════
+   DELETE
+════════════════════════════════ */
+function deleteTransaction(id) {
+  if (!confirm('Hapus transaksi ini?')) return;
+  transactions = transactions.filter(t => t.id !== id);
+  save();
+  renderAll();
+}
+
+/* ════════════════════════════════
+   SAVE
+════════════════════════════════ */
+function save() {
+  localStorage.setItem('bm_tx',     JSON.stringify(transactions));
+  localStorage.setItem('bm_limits', JSON.stringify(budgetLimits));
+}
+
+/* ════════════════════════════════
+   RENDER ALL
+════════════════════════════════ */
+function renderAll() {
+  const income  = transactions.filter(t => t.type === 'income').reduce((s,t) => s+t.amount, 0);
+  const expense = transactions.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0);
+  const balance = income - expense;
+  const pct     = income > 0 ? Math.round(balance/income*100) : 0;
+
+  document.getElementById('total-income').textContent  = fmt(income);
+  document.getElementById('total-expense').textContent = fmt(expense);
+  document.getElementById('total-balance').textContent = fmt(balance);
+  document.getElementById('count-income').textContent  = transactions.filter(t=>t.type==='income').length + ' transaksi';
+  document.getElementById('count-expense').textContent = transactions.filter(t=>t.type==='expense').length + ' transaksi';
+  document.getElementById('balance-pct').textContent   = pct + '% tersimpan dari pemasukan';
+
+  const bc = document.getElementById('balance-card');
+  bc.className = 'summary-card c-balance' + (balance < 0 ? ' neg' : '');
+
+  renderAlerts();
+  renderTransactions();
+  populateCategoryFilter();
+}
+
+/* ════════════════════════════════
+   ALERTS
+════════════════════════════════ */
+function renderAlerts() {
+  const area = document.getElementById('alert-area');
+  let html = '';
+  EXPENSE_CATS.forEach(cat => {
+    const limit = budgetLimits[cat];
+    if (!limit) return;
+    const spent = transactions.filter(t => t.type==='expense' && t.cat===cat).reduce((s,t)=>s+t.amount,0);
+    const pct   = Math.round(spent/limit*100);
+    if (pct >= 100)
+      html += `<div class="alert alert-danger"><i class="ti ti-alert-octagon"></i><span>Budget <strong>${cat}</strong> telah <strong>terlampaui</strong>! (${fmt(spent)} / ${fmt(limit)})</span></div>`;
+    else if (pct >= 80)
+      html += `<div class="alert alert-warn"><i class="ti ti-alert-triangle"></i><span>Budget <strong>${cat}</strong> hampir habis — ${pct}% terpakai (${fmt(spent)} / ${fmt(limit)})</span></div>`;
+  });
+  area.innerHTML = html;
+}
+
+/* ════════════════════════════════
+   TRANSACTION LIST
+════════════════════════════════ */
+function populateCategoryFilter() {
+  const sel  = document.getElementById('filter-cat');
+  const prev = sel.value;
+  const cats = [...new Set(transactions.map(t=>t.cat))].sort();
+  sel.innerHTML = '<option value="all">Semua Kategori</option>' +
+    cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  sel.value = prev;
+}
+
+function renderTransactions() {
+  const typeF  = document.getElementById('filter-type').value;
+  const catF   = document.getElementById('filter-cat').value;
+  const monthF = document.getElementById('filter-month').value;
+
+  let list = transactions.filter(t => {
+    if (typeF  !== 'all' && t.type !== typeF)             return false;
+    if (catF   !== 'all' && t.cat  !== catF)              return false;
+    if (monthF && !t.date.startsWith(monthF))             return false;
+    return true;
+  });
+
+  const el = document.getElementById('tx-list');
+  if (list.length === 0) {
+    el.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>Tidak ada transaksi yang cocok dengan filter.</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(t => `
+    <div class="tx-item">
+      <div class="tx-icon ${t.type}">
+        <i class="ti ${CAT_ICONS[t.cat] || 'ti-circle'}"></i>
+      </div>
+      <div class="tx-info">
+        <div class="tx-desc">
+          ${escHtml(t.desc)}
+          <span class="tx-cat-badge">${t.cat}</span>
+        </div>
+        <div class="tx-meta">${t.date}${t.note ? ' · ' + escHtml(t.note) : ''}</div>
+      </div>
+      <div class="tx-amount ${t.type}">${t.type==='income' ? '+' : '-'}${fmt(t.amount)}</div>
+      <button class="tx-del" onclick="deleteTransaction(${t.id})" aria-label="Hapus transaksi">
+        <i class="ti ti-trash"></i>
+      </button>
+    </div>
+  `).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ════════════════════════════════
+   BUDGET PANEL
+════════════════════════════════ */
+function renderBudgetPanel() {
+  // Form
+  document.getElementById('budget-form').innerHTML = EXPENSE_CATS.map(cat => `
+    <div class="budget-limit-row">
+      <label><i class="ti ${CAT_ICONS[cat]}"></i>${cat}</label>
+      <input type="number" placeholder="Masukkan batas (Rp)" min="0" step="10000"
+             value="${budgetLimits[cat] || ''}" data-cat="${cat}" />
+    </div>
+  `).join('');
+
+  renderBudgetUsage();
+}
+
+function saveBudgetLimits() {
+  document.querySelectorAll('#budget-form input').forEach(inp => {
+    const v = parseFloat(inp.value);
+    if (v > 0) budgetLimits[inp.dataset.cat] = v;
+    else       delete budgetLimits[inp.dataset.cat];
+  });
+  save();
+  renderBudgetUsage();
+  renderAlerts();
+  alert('Batas budget berhasil disimpan!');
+}
+
+function renderBudgetUsage() {
+  const el   = document.getElementById('budget-usage');
+  const rows = EXPENSE_CATS.map(cat => {
+    const spent = transactions.filter(t => t.type==='expense' && t.cat===cat).reduce((s,t)=>s+t.amount,0);
+    const limit = budgetLimits[cat];
+    if (!limit && spent === 0) return '';
+    const pct   = limit ? Math.min(Math.round(spent/limit*100), 100) : 0;
+    const color = pct >= 100 ? 'var(--red)' : pct >= 80 ? 'var(--amber)' : 'var(--green)';
+    return `
+      <div class="usage-row">
+        <div class="usage-cat">${cat}</div>
+        <div class="usage-bar-wrap">
+          <div class="usage-bar" style="width:${pct}%;background:${color}"></div>
+        </div>
+        <div class="usage-pct">${limit ? pct+'%' : '—'}</div>
+        <div class="usage-amounts">${fmt(spent)}${limit ? ' / '+fmt(limit) : ''}</div>
+      </div>
+    `;
+  }).filter(Boolean).join('');
+
+  el.innerHTML = rows || '<div class="empty"><i class="ti ti-chart-bar-off"></i>Belum ada data pengeluaran atau batas budget yang diatur.</div>';
+}
+
+/* ════════════════════════════════
+   CHARTS
+════════════════════════════════ */
+function renderCharts() {
+  const allCats = ['Gaji','Bisnis','Investasi','Bonus','Makanan','Transport','Hiburan','Kesehatan','Tagihan','Belanja','Pendidikan','Lainnya'];
+  const incomeData  = allCats.map(c => transactions.filter(t=>t.type==='income'  && t.cat===c).reduce((s,t)=>s+t.amount,0));
+  const expenseData = allCats.map(c => transactions.filter(t=>t.type==='expense' && t.cat===c).reduce((s,t)=>s+t.amount,0));
+  const activeCats  = allCats.filter((_,i) => incomeData[i]>0 || expenseData[i]>0);
+  const ai = allCats.map((_,i)=>i).filter(i => incomeData[i]>0 || expenseData[i]>0);
+
+  // Bar chart
+  if (barChart) barChart.destroy();
+  barChart = new Chart(document.getElementById('chart-bar'), {
+    type: 'bar',
+    data: {
+      labels: activeCats,
+      datasets: [
+        { label:'Pemasukan',   data: ai.map(i=>incomeData[i]),  backgroundColor:'#1D9E75', borderRadius:5 },
+        { label:'Pengeluaran', data: ai.map(i=>expenseData[i]), backgroundColor:'#D85A30', borderRadius:5 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { autoSkip: false, maxRotation: 30, font: { size: 11 } }, grid: { display: false } },
+        y: {
+          ticks: { callback: v => fmtShort(v), font: { size: 11 } },
+          grid:  { color: 'rgba(128,128,128,0.1)' }
+        }
+      }
+    }
+  });
+
+  // Donut chart
+  const expCats = EXPENSE_CATS.filter(c => transactions.some(t=>t.type==='expense'&&t.cat===c));
+  const expVals = expCats.map(c => transactions.filter(t=>t.type==='expense'&&t.cat===c).reduce((s,t)=>s+t.amount,0));
+  const total   = expVals.reduce((a,b)=>a+b,0);
+
+  document.getElementById('donut-legend').innerHTML = expCats.map((c,i) =>
+    `<span><span class="legend-dot" style="background:${PALETTE[i%PALETTE.length]}"></span>${c} ${total?Math.round(expVals[i]/total*100)+'%':''}</span>`
+  ).join('');
+
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(document.getElementById('chart-donut'), {
+    type: 'doughnut',
+    data: {
+      labels: expCats.length ? expCats : ['Tidak ada data'],
+      datasets: [{
+        data: expVals.length ? expVals : [1],
+        backgroundColor: expCats.length ? PALETTE.slice(0,expCats.length) : ['#e0e0e0'],
+        borderWidth: 2,
+        borderColor: '#fff',
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)} (${total?Math.round(ctx.raw/total*100):0}%)` } }
+      }
+    }
+  });
+
+  // Line chart (monthly trend)
+  const months = [...new Set(transactions.map(t=>t.date.slice(0,7)))].sort().slice(-6);
+  const lineIncome  = months.map(m => transactions.filter(t=>t.type==='income'  && t.date.startsWith(m)).reduce((s,t)=>s+t.amount,0));
+  const lineExpense = months.map(m => transactions.filter(t=>t.type==='expense' && t.date.startsWith(m)).reduce((s,t)=>s+t.amount,0));
+
+  if (lineChart) lineChart.destroy();
+  lineChart = new Chart(document.getElementById('chart-line'), {
+    type: 'line',
+    data: {
+      labels: months.map(monthLabel),
+      datasets: [
+        { label:'Pemasukan',   data: lineIncome,  borderColor:'#1D9E75', backgroundColor:'rgba(29,158,117,0.1)', tension:0.4, fill:true, pointRadius:4, pointBackgroundColor:'#1D9E75' },
+        { label:'Pengeluaran', data: lineExpense, borderColor:'#D85A30', backgroundColor:'rgba(216,90,48,0.1)',  tension:0.4, fill:true, pointRadius:4, pointBackgroundColor:'#D85A30' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+        y: { ticks: { callback: v => fmtShort(v), font: { size: 11 } }, grid: { color: 'rgba(128,128,128,0.1)' } }
+      }
+    }
+  });
+}
+
+/* ════════════════════════════════
+   INIT
+════════════════════════════════ */
+document.getElementById('tx-date').value = today();
+
+// Set default filter month to current month
+document.getElementById('filter-month').value = today().slice(0,7);
+
+// Seed demo data if empty
+if (transactions.length === 0) {
+  const demo = [
+    { id:1,  type:'income',  desc:'Gaji Bulanan',      amount:8000000, cat:'Gaji',      date:'2026-05-01', note:'' },
+    { id:2,  type:'income',  desc:'Freelance Design',  amount:1500000, cat:'Bisnis',    date:'2026-05-05', note:'Klien PT XYZ' },
+    { id:3,  type:'income',  desc:'Dividen Saham',     amount:250000,  cat:'Investasi', date:'2026-05-10', note:'' },
+    { id:4,  type:'expense', desc:'Belanja Groceries', amount:450000,  cat:'Makanan',   date:'2026-05-06', note:'Indomaret' },
+    { id:5,  type:'expense', desc:'Makan Siang Kantor',amount:85000,   cat:'Makanan',   date:'2026-05-07', note:'' },
+    { id:6,  type:'expense', desc:'Grab / Ojek',       amount:120000,  cat:'Transport', date:'2026-05-07', note:'' },
+    { id:7,  type:'expense', desc:'Netflix & Spotify',  amount:180000,  cat:'Hiburan',   date:'2026-05-08', note:'' },
+    { id:8,  type:'expense', desc:'Listrik PLN',       amount:250000,  cat:'Tagihan',   date:'2026-05-09', note:'' },
+    { id:9,  type:'expense', desc:'Internet Indihome', amount:100000,  cat:'Tagihan',   date:'2026-05-09', note:'' },
+    { id:10, type:'income',  desc:'Gaji Bulanan',      amount:8000000, cat:'Gaji',      date:'2026-04-01', note:'' },
+    { id:11, type:'expense', desc:'Belanja Bulanan',   amount:700000,  cat:'Belanja',   date:'2026-04-15', note:'Shopee' },
+    { id:12, type:'expense', desc:'Dokter & Obat',     amount:300000,  cat:'Kesehatan', date:'2026-04-20', note:'' },
+  ];
+  transactions = demo;
+  budgetLimits = { Makanan:600000, Transport:300000, Hiburan:500000, Tagihan:500000, Belanja:800000 };
+  save();
+}
+
+renderAll();
+</script>
+</body>
+</html>
